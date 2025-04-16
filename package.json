@@ -53,9 +53,10 @@
     "prettier:contracts": "prettier --config .prettierrc --plugin=prettier-plugin-solidity --list-different '{contracts,src}/**/*.sol'",
     "test": "forge test",
     "typechain": "typechain --target ethers-v5 --out-dir ./typechain artifacts_forge/**.sol/**/*.json",
-    "build": "yarn clean && yarn compile && yarn typechain",
+    "build": "yarn clean && yarn compile && yarn typechain && yarn tsc",
     "forge:build": "forge build",
     "forge:test": "forge test",
+    "tsc": "tsc --project tsconfig.build.json",
     "gas": "forge snapshot --isolate --mc Benchmark --gas-report --diff .gas-snapshot > gasreport.txt",
     "forge:snapshot": "forge snapshot --check",
     "aabenchmark": "forge test --mc AABenchmarkPrepare && forge test --mc ProfileThirdwebAccount -vvv"
