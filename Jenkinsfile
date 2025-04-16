@@ -3,7 +3,7 @@
 def pipelineConfig = [
   "JSpublicLibrary": "true",
   "pkgRepoName": "npmjs-org",
-  "buildWith": "nodetrufflefoundrys",
+  "buildWith": "nodetrufflefoundry",
   "baseImageTag": "20.18.3-bullseye"
 ]
 
