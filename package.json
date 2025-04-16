@@ -5,7 +5,8 @@
   "license": "Apache-2.0",
   "source": "typechain/index.ts",
   "files": [
-    "/contracts/**/*.sol"
+    "/contracts/**/*.sol",
+    "js/**/*.*"
   ],
   "devDependencies": {
     "@openzeppelin/contracts": "^4.9.6",
@@ -45,7 +46,7 @@
     "typescript": "^5.3.2"
   },
   "scripts": {
-    "clean": "forge clean && rm -rf abi/ && rm -rf artifacts_forge/ && rm -rf contract_artifacts && rm -rf dist/ && rm -rf typechain/",
+    "clean": "forge clean && rm -rf abi/ && rm -rf build/ && rm -rf js/ && rm -rf artifacts_forge/ && rm -rf contract_artifacts && rm -rf dist/ && rm -rf typechain/",
     "compile": "forge build && npx ts-node scripts/package-release.ts",
     "lint": "solhint \"contracts/**/*.sol\"",
     "prettier": "prettier --config .prettierrc --write --plugin=prettier-plugin-solidity '{contracts,src}/**/*.sol'",
