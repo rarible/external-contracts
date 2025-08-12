@@ -70,5 +70,9 @@
     "access": "public",
     "registry": "https://registry.npmjs.org"
   },
-  "access": "public"
+  "access": "public",
+  "dependencies": {
+    "@solidity-parser/parser": "^0.20.2",
+    "toml": "^3.0.0"
+  }
 }
