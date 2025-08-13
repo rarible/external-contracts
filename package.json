@@ -64,7 +64,8 @@
     "gas": "forge snapshot --isolate --mc Benchmark --gas-report --diff .gas-snapshot > gasreport.txt",
     "forge:snapshot": "forge snapshot --check",
     "aabenchmark": "forge test --mc AABenchmarkPrepare && forge test --mc ProfileThirdwebAccount -vvv",
-    "release": "npm publish"
+    "release": "npm publish",
+    "compile-zk": "npx ts-node scripts/zk-compilation/zk-compilation.ts"
   },
   "publishConfig": {
     "access": "public",

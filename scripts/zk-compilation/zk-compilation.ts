@@ -1,118 +1,154 @@
-import fs from "fs-extra";
+#!/usr/bin/env ts-node
+
+import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import toml from "toml";
 
-// === Directories ===
-const contractsDir = path.resolve(__dirname, "../contracts");
-const zkArtifactsDir = path.resolve(__dirname, "../zk-artifacts");
-const zkBundleDir = path.resolve(__dirname, "../zk_contract_artifacts");
+type DependencyGraph = Record<string, Set<string>>;
 
-// === Recursively find all .sol files ===
-async function getAllSolidityFiles(dir: string): Promise<string[]> {
-  const dirents = await fs.readdir(dir, { withFileTypes: true });
-  const files = await Promise.all(
-    dirents.map(async (dirent) => {
-      const res = path.join(dir, dirent.name);
-      return dirent.isDirectory() ? await getAllSolidityFiles(res) : res;
-    }),
-  );
-  return files.flat().filter(file => file.endsWith(".sol"));
-}
+const contractsDir = path.resolve("contracts");
+const outDir = path.resolve("out");
+const foundryTomlPath = path.resolve("foundry.toml");
 
-// === Build dependency graph based on import statements ===
-async function buildDependencyGraph(files: string[]): Promise<Map<string, string[]>> {
-  const graph = new Map<string, string[]>();
-  const importRegex = /import\s+["'](.+)["'];/g;
+// ===== Load remappings from foundry.toml =====
+function loadRemappings(): Record<string, string> {
+  const tomlContent = fs.readFileSync(foundryTomlPath, "utf8");
+  const parsed = toml.parse(tomlContent);
+  const remappingsArray: string[] = parsed.remappings || [];
+  const remappings: Record<string, string> = {};
 
-  for (const file of files) {
-    const content = await fs.readFile(file, "utf8");
-    const imports: string[] = [];
-
-    let match: RegExpExecArray | null;
-    while ((match = importRegex.exec(content)) !== null) {
-      const importPath = match[1];
-      const resolvedPath = path.resolve(path.dirname(file), importPath);
-      imports.push(resolvedPath);
-    }
-
-    graph.set(path.resolve(file), imports);
+  for (const mapping of remappingsArray) {
+    const [key, val] = mapping.split("=");
+    remappings[key.trim()] = val.trim();
   }
 
+  return remappings;
+}
+
+const remappings = loadRemappings();
+
+// ===== Utility: Resolve imports with remappings =====
+function resolveImport(importPath: string): string {
+  for (const [prefix, target] of Object.entries(remappings)) {
+    if (importPath.startsWith(prefix)) {
+      return path.resolve(target, importPath.replace(prefix, ""));
+    }
+  }
+  if (importPath.startsWith(".")) {
+    return path.resolve(importPath);
+  }
+  return importPath; // leave unresolved if external
+}
+
+// ===== Find all .sol files =====
+function findSolFiles(dir: string): string[] {
+  let results: string[] = [];
+  for (const file of fs.readdirSync(dir)) {
+    const full = path.join(dir, file);
+    if (fs.statSync(full).isDirectory()) {
+      results = results.concat(findSolFiles(full));
+    } else if (file.endsWith(".sol")) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+// ===== Parse imports from a Solidity file =====
+function parseImports(filePath: string): string[] {
+  const content = fs.readFileSync(filePath, "utf8");
+  const regex = /^\s*import\s+["']([^"']+)["'];/gm;
+  const imports: string[] = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    imports.push(match[1]);
+  }
+  return imports;
+}
+
+// ===== Build dependency graph =====
+function buildDependencyGraph(files: string[]): DependencyGraph {
+  const graph: DependencyGraph = {};
+  for (const file of files) {
+    const imports = parseImports(file).map(resolveImport);
+    graph[file] = new Set();
+    for (const imp of imports) {
+      if (imp.endsWith(".sol") && fs.existsSync(imp)) {
+        graph[file].add(path.resolve(imp));
+      }
+    }
+  }
   return graph;
 }
 
-// === Topological sort ===
-function topologicalSort(graph: Map<string, string[]>): string[] {
+// ===== Topological sort =====
+function topologicalSort(graph: DependencyGraph): string[] {
   const visited = new Set<string>();
   const result: string[] = [];
 
-  function visit(file: string) {
-    if (visited.has(file)) return;
-    visited.add(file);
-
-    const deps = graph.get(file) || [];
-    for (const dep of deps) {
+  function visit(node: string) {
+    if (visited.has(node)) return;
+    visited.add(node);
+    for (const dep of graph[node] || []) {
       visit(dep);
     }
-
-    result.push(file);
+    result.push(node);
   }
 
-  for (const file of graph.keys()) {
-    visit(file);
+  for (const node of Object.keys(graph)) {
+    visit(node);
   }
-
   return result;
 }
 
-// === Compile a single contract with zk-solc ===
-function compileZK(contractPath: string) {
-  console.log(`🛠 Compiling: ${contractPath}`);
-  try {
-    execSync(
-      `zk-solc --sol ${contractPath} --circuit --out ${zkArtifactsDir}`,
-      { stdio: "inherit" }
-    );
-  } catch (err) {
-    console.error(`❌ Failed to compile ${contractPath}:`, (err as Error).message);
+// ===== Compile contracts in order (with error logging) =====
+function compileContractsInOrder(sortedFiles: string[]) {
+  const compiled = new Set<string>();
+  const failedContracts: string[] = [];
+
+  for (const file of sortedFiles) {
+    if (compiled.has(file)) continue;
+
+    console.log(`\n=== Compiling ${file} ===`);
+    try {
+      execSync(
+        `forge build ${file} --zksync --out ${outDir}`,
+        { stdio: "inherit" }
+      );
+      compiled.add(file);
+    } catch (err) {
+      console.error(`❌ Error compiling ${file}:`, (err as Error).message);
+      failedContracts.push(file);
+      // Continue with next file instead of exiting
+    }
+  }
+
+  if (failedContracts.length > 0) {
+    console.log("\n=== Compilation finished with errors ===");
+    failedContracts.forEach((f) => console.log(` - ${f}`));
+  } else {
+    console.log("\n🎉 All contracts compiled successfully");
   }
 }
 
-// === Copy compiled artifacts to bundle directory ===
-async function bundleArtifacts() {
-  await fs.ensureDir(zkBundleDir);
-  const artifactFiles = await fs.readdir(zkArtifactsDir);
-  for (const file of artifactFiles) {
-    const src = path.join(zkArtifactsDir, file);
-    const dst = path.join(zkBundleDir, file);
-    await fs.copy(src, dst);
-  }
-  console.log(`📦 ZK artifacts bundled to: ${zkBundleDir}`);
+// ===== Main =====
+function main() {
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir);
+
+  console.log("Scanning Solidity contracts...");
+  const allFiles = findSolFiles(contractsDir);
+  console.log(`Found ${allFiles.length} contracts.`);
+
+  console.log("Building dependency graph...");
+  const graph = buildDependencyGraph(allFiles);
+
+  console.log("Sorting contracts (topological order)...");
+  const sortedFiles = topologicalSort(graph);
+  console.log(`Compilation order:`);
+  sortedFiles.forEach((f, i) => console.log(`${i + 1}. ${f}`));
+
+  compileContractsInOrder(sortedFiles);
 }
 
-// === Main ===
-async function main() {
-  console.log("🔍 Searching for Solidity files...");
-  const allSolFiles = await getAllSolidityFiles(contractsDir);
-
-  console.log("🧩 Building dependency graph...");
-  const dependencyGraph = await buildDependencyGraph(allSolFiles);
-
-  console.log("📐 Sorting contracts by dependency...");
-  const sortedContracts = topologicalSort(dependencyGraph);
-
-  console.log("🚀 Compiling contracts...");
-  for (const contract of sortedContracts) {
-    compileZK(contract);
-  }
-
-  console.log("📦 Bundling artifacts...");
-  await bundleArtifacts();
-
-  console.log("✅ ZK compilation complete.");
-}
-
-main().catch((err) => {
-  console.error("🔥 Script failed:", err);
-  process.exit(1);
-});
+main();
