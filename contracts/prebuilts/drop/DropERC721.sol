@@ -95,7 +95,7 @@ contract DropERC721 is
         uint128 _royaltyBps,
         uint128 _platformFeeBps,
         address _platformFeeRecipient
-    ) external initializer {
+    ) external virtual initializer {
         bytes32 _transferRole = keccak256("TRANSFER_ROLE");
         bytes32 _minterRole = keccak256("MINTER_ROLE");
         bytes32 _metadataRole = keccak256("METADATA_ROLE");
@@ -150,11 +150,11 @@ contract DropERC721 is
                         Contract identifiers
     //////////////////////////////////////////////////////////////*/
 
-    function contractType() external pure returns (bytes32) {
+    function contractType() external pure virtual returns (bytes32) {
         return bytes32("DropERC721");
     }
 
-    function contractVersion() external pure returns (uint8) {
+    function contractVersion() external pure virtual returns (uint8) {
         return uint8(4);
     }
 

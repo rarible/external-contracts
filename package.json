@@ -70,5 +70,8 @@
     "access": "public",
     "registry": "https://registry.npmjs.org"
   },
-  "access": "public"
+  "access": "public",
+  "dependencies": {
+    "toml": "^3.0.0"
+  }
 }
