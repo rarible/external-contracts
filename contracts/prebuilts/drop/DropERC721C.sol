@@ -7,6 +7,8 @@ import "./DropERC721.sol";
 import "../../extension/CreatorTokenBase.sol";
 import "../../extension/AutomaticValidatorTransferApproval.sol";
 import "../../extension/interface/ICreatorTokenLegacy.sol";
+import "../../extension/interface/IPlatformFee.sol";
+import "../../lib/CurrencyTransferLib.sol";
 
 /**
  * @title DropERC721C
@@ -83,7 +85,7 @@ contract DropERC721C is
     }
 
     function contractVersion() external pure override returns (uint8) {
-        return uint8(1);
+        return uint8(2);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -129,4 +131,54 @@ contract DropERC721C is
         }
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        Platform Fee Override
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Max bps in the thirdweb system.
+    uint256 private constant MAX_BPS = 10_000;
+
+    /// @dev Collects and distributes the primary sale value of NFTs being claimed.
+    function _collectPriceOnClaim(
+        address _primarySaleRecipient,
+        uint256 _quantityToClaim,
+        address _currency,
+        uint256 _pricePerToken
+    ) internal override {
+        if (_pricePerToken == 0) {
+            require(msg.value == 0, "!Value");
+            return;
+        }
+
+        address saleRecipient = _primarySaleRecipient == address(0) ? primarySaleRecipient() : _primarySaleRecipient;
+
+        uint256 totalPrice = _quantityToClaim * _pricePerToken;
+        uint256 platformFees;
+        address platformFeeRecipient;
+
+        if (getPlatformFeeType() == IPlatformFee.PlatformFeeType.Flat) {
+            (platformFeeRecipient, platformFees) = getFlatPlatformFeeInfo();
+        } else {
+            (address recipient, uint16 platformFeeBps) = getPlatformFeeInfo();
+            platformFeeRecipient = recipient;
+            platformFees = ((totalPrice * platformFeeBps) / MAX_BPS);
+        }
+        require(totalPrice >= platformFees, "price less than platform fee");
+
+        bool validMsgValue;
+        if (_currency == CurrencyTransferLib.NATIVE_TOKEN) {
+            validMsgValue = msg.value == totalPrice;
+        } else {
+            validMsgValue = msg.value == 0;
+        }
+        require(validMsgValue, "!V");
+
+        CurrencyTransferLib.transferCurrency(_currency, _msgSender(), platformFeeRecipient, platformFees);
+        CurrencyTransferLib.transferCurrency(
+            _currency,
+            _msgSender(),
+            saleRecipient,
+            totalPrice - platformFees
+        );
+    }
 }
