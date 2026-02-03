@@ -60,11 +60,11 @@ contract DropERC721FlatFee is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Only transfers to or from TRANSFER_ROLE holders are valid, when transfers are restricted.
-    bytes32 private transferRole;
+    bytes32 internal transferRole;
     /// @dev Only MINTER_ROLE holders can sign off on `MintRequest`s and lazy mint tokens.
-    bytes32 private minterRole;
+    bytes32 internal minterRole;
     /// @dev Only METADATA_ROLE holders can reveal the URI for a batch of delayed reveal NFTs, and update or freeze batch metadata.
-    bytes32 private metadataRole;
+    bytes32 internal metadataRole;
 
     /// @dev Max bps in the thirdweb system.
     uint256 private constant MAX_BPS = 10_000;
@@ -96,7 +96,7 @@ contract DropERC721FlatFee is
         uint128 _royaltyBps,
         uint128 _platformFeeBps,
         address _platformFeeRecipient
-    ) external initializer {
+    ) external virtual initializer {
         bytes32 _transferRole = keccak256("TRANSFER_ROLE");
         bytes32 _minterRole = keccak256("MINTER_ROLE");
         bytes32 _metadataRole = keccak256("METADATA_ROLE");
@@ -151,11 +151,11 @@ contract DropERC721FlatFee is
                         Contract identifiers
     //////////////////////////////////////////////////////////////*/
 
-    function contractType() external pure returns (bytes32) {
+    function contractType() external pure virtual returns (bytes32) {
         return bytes32("DropERC721");
     }
 
-    function contractVersion() external pure returns (uint8) {
+    function contractVersion() external pure virtual returns (uint8) {
         return uint8(4);
     }
 
