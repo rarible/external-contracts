@@ -57,9 +57,9 @@ contract OpenEditionERC721FlatFee is
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Only transfers to or from TRANSFER_ROLE holders are valid, when transfers are restricted.
-    bytes32 private transferRole;
+    bytes32 internal transferRole;
     /// @dev Only MINTER_ROLE holders can update the shared metadata of tokens.
-    bytes32 private minterRole;
+    bytes32 internal minterRole;
 
     /// @dev Max bps in the thirdweb system.
     uint256 private constant MAX_BPS = 10_000;
@@ -85,7 +85,7 @@ contract OpenEditionERC721FlatFee is
         uint128 _royaltyBps,
         uint128 _platformFeeBps,
         address _platformFeeRecipient
-    ) external initializerERC721A initializer {
+    ) external virtual initializerERC721A initializer {
         bytes32 _transferRole = keccak256("TRANSFER_ROLE");
         bytes32 _minterRole = keccak256("MINTER_ROLE");
 
