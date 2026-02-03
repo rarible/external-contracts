@@ -58,10 +58,6 @@ contract DropERC721FlatFeeC is
         _setupDefaultRoyaltyInfo(_royaltyRecipient, _royaltyBps);
         _setupPrimarySaleRecipient(_saleRecipient);
 
-        transferRole = _transferRole;
-        minterRole = _minterRole;
-        metadataRole = _metadataRole;
-
         // Initialize Creator Token
         _initializeCreatorToken();
         _initializeAutoApproval();
