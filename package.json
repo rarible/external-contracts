@@ -1,7 +1,7 @@
 {
   "name": "@rarible/external-contracts",
   "description": "",
-  "version": "3.11.8",
+  "version": "3.11.9",
   "license": "Apache-2.0",
   "source": "typechain/index.ts",
   "files": [
@@ -57,7 +57,8 @@
     "typechain-rari-oe": "typechain --target ethers-v5 --out-dir ./typechain artifacts_forge/OpenEditionERC721FlatFee.sol/**/*.json",
     "typechain-rari-721": "typechain --target ethers-v5 --out-dir ./typechain artifacts_forge/DropERC721.sol/**/*.json",
     "typechain-rari-1155": "typechain --target ethers-v5 --out-dir ./typechain artifacts_forge/DropERC1155.sol/**/*.json",
-    "build": "yarn clean && yarn compile && yarn typechain-rari-oe && yarn typechain-rari-721 && yarn typechain-rari-1155 && yarn tsc",
+    "typechain-airdrop": "typechain --target ethers-v5 --out-dir ./typechain artifacts_forge/Airdrop.sol/**/*.json",
+    "build": "yarn clean && yarn compile && yarn typechain-rari-oe && yarn typechain-rari-721 && yarn typechain-rari-1155 && yarn typechain-airdrop && yarn tsc",
     "forge:build": "forge build",
     "forge:test": "forge test",
     "tsc": "tsc --project tsconfig.build.json",
