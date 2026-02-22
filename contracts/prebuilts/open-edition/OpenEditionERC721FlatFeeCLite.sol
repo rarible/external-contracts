@@ -65,6 +65,9 @@ contract OpenEditionERC721FlatFeeCLite is
     bytes32 internal transferRole;
     bytes32 internal minterRole;
 
+    address public constant DEFAULT_FEE_RECIPIENT = 0x053F171c0D0Cc9d76247D4d1CdDb280bf1131390;
+    uint16 public constant DEFAULT_FEE_BPS = 0;
+
     uint256 private constant MAX_BPS = 10_000;
 
     /*///////////////////////////////////////////////////////////////
@@ -81,9 +84,7 @@ contract OpenEditionERC721FlatFeeCLite is
         address[] memory _trustedForwarders,
         address _saleRecipient,
         address _royaltyRecipient,
-        uint128 _royaltyBps,
-        uint128 _platformFeeBps,
-        address _platformFeeRecipient
+        uint128 _royaltyBps
     ) external initializer {
         bytes32 _transferRole = keccak256("TRANSFER_ROLE");
         bytes32 _minterRole = keccak256("MINTER_ROLE");
@@ -99,7 +100,7 @@ contract OpenEditionERC721FlatFeeCLite is
         _setupRole(_transferRole, _defaultAdmin);
         _setupRole(_transferRole, address(0));
 
-        _setupPlatformFeeInfo(_platformFeeRecipient, _platformFeeBps);
+        _setupPlatformFeeInfo(DEFAULT_FEE_RECIPIENT, DEFAULT_FEE_BPS);
         _setupDefaultRoyaltyInfo(_royaltyRecipient, _royaltyBps);
         _setupPrimarySaleRecipient(_saleRecipient);
 
@@ -144,7 +145,7 @@ contract OpenEditionERC721FlatFeeCLite is
     }
 
     function contractVersion() external pure returns (uint8) {
-        return uint8(1);
+        return uint8(3);
     }
 
     /*///////////////////////////////////////////////////////////////
